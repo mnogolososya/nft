@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "nftbackend"
+version = "0.1.0"
+description = ""
+authors = ["abraynin <abraynin@mnogolososya.ru>"]
+
+[tool.poetry.dependencies]
+python = ">=3.10,<3.11"
+fastapi = "^0.78.0"
+uvicorn = "^0.17.6"
+motor = "2.5"
+web3 = "6.0.0b3"
+dynaconf = "^3.1.9"
+pytz = "^2022.1"
+dependency-injector = "^4.39.1"
+ml-common = {git = "https://gitlab.mnogo.losos/mnogolososya/ml-common.git", rev = "0.1.1"}
+ml-platform-client = {git = "https://gitlab.mnogo.losos/mnogolososya/ml-platform-client.git", rev = "0.7.15"}
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -1,0 +1,93 @@
+variables:
+  DOCKER_DRIVER: overlay2
+  DOCKER_TLS_CERTDIR: ""
+
+  # docker registry connection params
+  PROJECT_DOCKER_REGISTRY_HOST:     $DOCKER_REGISTRY
+  PROJECT_DOCKER_REGISTRY_USER:     $DOCKER_REGISTRY_RW_USER
+  PROJECT_DOCKER_REGISTRY_PASSWORD: $DOCKER_REGISTRY_RW_PASSWORD
+  # docker image params
+  PROJECT_DOCKER_REGISTRY_REPO: $PROJECT_DOCKER_REGISTRY_REPO
+  PROJECT_DOCKER_IMAGE_TAG: $CI_COMMIT_SHORT_SHA
+
+stages:
+  - build
+  - test
+  - deploy
+
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^deploy\//'
+      variables:
+        PROJECT_RELEASE_TYPE: "deploy"
+    - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG =~ /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)?\.?(?:0|[1-9]\d*)-rc(?:0|[1-9]\d*)$/'
+      variables:
+        PROJECT_RELEASE_TYPE: "candidate"
+        PROJECT_DOCKER_IMAGE_TAG: $CI_COMMIT_TAG
+    - if: '$CI_COMMIT_TAG && $CI_COMMIT_TAG =~ /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)?\.?(?:0|[1-9]\d*)?\.?(?:0|[1-9]\d*)?$/'
+      variables:
+        PROJECT_RELEASE_TYPE: "stable"
+        PROJECT_DOCKER_IMAGE_TAG: $CI_COMMIT_TAG
+
+.docker_dind:
+  image:
+    name: docker:dind
+    entrypoint: [""]
+  before_script:
+    - cat $DOCKER_REGISTRY_RW_JSON_KEY | docker login --username json_key --password-stdin cr.yandex
+    - docker info
+
+.helm:
+  needs: ['build']
+  image:
+    name: dtzar/helm-kubectl:3.9.0
+    entrypoint: [""]
+
+build:
+  stage: build
+  extends: .docker_dind
+  script:
+    - docker build 
+      --tag ${PROJECT_DOCKER_REGISTRY_HOST}/${PROJECT_DOCKER_REGISTRY_REPO}:${PROJECT_DOCKER_IMAGE_TAG} -f ./devops/Dockerfile ./
+    - docker images -a
+    - docker push ${PROJECT_DOCKER_REGISTRY_HOST}/${PROJECT_DOCKER_REGISTRY_REPO}:${PROJECT_DOCKER_IMAGE_TAG}
+
+.deploy:
+  stage: deploy
+  extends: .helm
+  environment:
+    name: $ENVIRONMENT_NAME
+    url: $ENVIRONMENT_URL
+    kubernetes:
+      namespace: nft-${ENVIRONMENT_NAME}
+  script:
+    - helm -n nft-${ENVIRONMENT_NAME} list
+    - helm upgrade -i -n nft-${ENVIRONMENT_NAME} --create-namespace --atomic --timeout=5m -f ./devops/helm/values.yaml -f ./devops/helm/values-${ENVIRONMENT_NAME}.yaml
+      --set image.repository=${PROJECT_DOCKER_REGISTRY_HOST}/${PROJECT_DOCKER_REGISTRY_REPO}
+      --set image.tag=${PROJECT_DOCKER_IMAGE_TAG}
+      --set ci.job_url=${CI_JOB_URL},ci.project_path_slug=${CI_PROJECT_PATH_SLUG},ci.environment_slug=${CI_ENVIRONMENT_SLUG},
+      --set var.ENV_FOR_DYNACONF=${ENVIRONMENT_NAME}
+      --set var.MLP_CLIENT=${MLP_CLIENT}
+      --set var.MLP_SECRET=${MLP_SECRET}
+      --set var.MONGO_CONNECTION_STRING=${MONGO_CONNECTION_STRING}
+      nft-${ENVIRONMENT_NAME} ./devops/helm
+    - helm -n nft-${ENVIRONMENT_NAME} list
+
+deploy_staging:
+  extends: .deploy
+  variables:
+    ENVIRONMENT_NAME: staging
+    ENVIRONMENT_URL: https://nft-stage.k8s.mnogo.losos
+    ENVIRONMENT_APP: Staging
+
+
+deploy_prod:
+  extends: .deploy
+  variables:
+    ENVIRONMENT_NAME: production
+    ENVIRONMENT_URL: https://nft-prod.k8s.mnogo.losos
+    ENVIRONMENT_APP: Production
+  rules:
+    - if: $PROJECT_RELEASE_TYPE == "stable"
+      when: manual
+    - when: never

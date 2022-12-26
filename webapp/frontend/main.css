@@ -1,0 +1,76 @@
+body {
+  background-color: #fff;
+  padding: 15px;
+}
+
+.content {
+  min-height: 100vh;
+  width: 100%;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.title {
+  font-family: 'Russo One', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 80px;
+  line-height: 100%;
+}
+
+.text {
+  margin-top: 16px;
+  margin-bottom: 24px;
+
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 140%;
+
+  color: #000000;
+}
+
+.desc {
+  margin-bottom: 24px;
+
+  font-family: 'Inter', sans-serif;
+  font-style: normal;
+  font-weight: 400;
+  font-size: 20px;
+  line-height: 140%;
+
+  color: #000000;
+  max-width: 628px;
+}
+
+.bold {
+  font-family: 'Russo One', sans-serif;
+}
+
+.link {
+  font-family: 'Inter', sans-serif;
+  font-style: italic;
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 140%;
+  /* identical to box height, or 20px */
+
+  text-decoration-line: underline;
+
+  color: #000000;
+}
+
+a, a:visited {
+  text-decoration: underline;
+  text-decoration-line: underline;
+  color: #000000;
+}
+
+a:hover {
+  text-decoration: underline;
+  text-decoration-line: underline;
+  color: #000000;
+}
